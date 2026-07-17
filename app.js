@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeReviewTask = null;
   let reviewCandidates = [];
   let engineMode = 'idle'; // 'idle', 'predicting', 'reviewing'
+  let activeReviewVisual = null;      // Stored { from, to, quality, bestFrom, bestTo }
+  let activeSearchSuggestedMove = null; // Stored { from, to }
 
   // Standard opening sequences for Book Move detection
   const bookOpenings = new Set([
@@ -361,6 +363,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     logEngine(`[Reviewed Move ${task.moveIndex + 1}]: Result is ${quality.toUpperCase()} (Loss: ${loss} cp)`);
     
+    // Draw visual feedback on the board if this is the active live move
+    const history = chess.history({ verbose: true });
+    if (task.moveIndex === history.length - 1) {
+      const isSubOptimal = !['brilliant', 'great', 'best', 'excellent'].includes(quality);
+      activeReviewVisual = {
+        from: task.moveObj.from,
+        to: task.moveObj.to,
+        quality: quality,
+        bestFrom: isSubOptimal ? bestMove.uci.substring(0, 2) : null,
+        bestTo: isSubOptimal ? bestMove.uci.substring(2, 4) : null
+      };
+      applyReviewVisual(activeReviewVisual);
+    }
+    
     updateReviewScorecard();
     renderMoveHistory();
     
@@ -403,6 +419,96 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'mistake': return '?';
       case 'blunder': return '??';
       default: return '';
+    }
+  }
+
+  function applyReviewVisual(visual) {
+    const fromSq = document.querySelector(`.square[data-coord="${visual.from}"]`);
+    const toSq = document.querySelector(`.square[data-coord="${visual.to}"]`);
+    
+    if (fromSq) fromSq.classList.add(`move-${visual.quality}`);
+    if (toSq) {
+      toSq.classList.add(`move-${visual.quality}`);
+      
+      const existingBadge = toSq.querySelector('.board-move-badge');
+      if (existingBadge) existingBadge.remove();
+      
+      const badge = document.createElement('div');
+      badge.className = `board-move-badge ${visual.quality}`;
+      badge.innerHTML = `<span class="badge-icon">${getBadgeSymbol(visual.quality)}</span>`;
+      toSq.appendChild(badge);
+    }
+    
+    if (visual.bestFrom && visual.bestTo) {
+      drawArrow(visual.bestFrom, visual.bestTo, 'best');
+    }
+  }
+
+  function getSquareCenterPercent(coord) {
+    if (!coord || coord.length < 2) return { x: 0, y: 0 };
+    const file = coord.charCodeAt(0) - 97; // 'a' = 0
+    const rank = 8 - parseInt(coord.charAt(1)); // '8' = 0
+    
+    let fIdx = file;
+    let rIdx = rank;
+    if (boardFlipped) {
+      fIdx = 7 - file;
+      rIdx = 7 - rank;
+    }
+    
+    const x = (fIdx + 0.5) * 12.5;
+    const y = (rIdx + 0.5) * 12.5;
+    return { x, y };
+  }
+
+  function drawArrow(from, to, type = 'best') {
+    const svg = document.getElementById('board-arrows-svg');
+    if (!svg) return;
+    
+    const start = getSquareCenterPercent(from);
+    const end = getSquareCenterPercent(to);
+    
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    const shortenVal = 5.0; // Pct to shorten
+    let targetX = end.x;
+    let targetY = end.y;
+    
+    if (dist > shortenVal) {
+      targetX = end.x - (dx / dist) * shortenVal;
+      targetY = end.y - (dy / dist) * shortenVal;
+    }
+    
+    const color = type === 'best' ? 'rgba(20, 184, 166, 0.8)' : 'rgba(56, 189, 248, 0.8)';
+    const markerId = type === 'best' ? 'arrowhead-best' : 'arrowhead-suggest';
+    
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", `${start.x}%`);
+    line.setAttribute("y1", `${start.y}%`);
+    line.setAttribute("x2", `${targetX}%`);
+    line.setAttribute("y2", `${targetY}%`);
+    line.setAttribute("stroke", color);
+    line.setAttribute("stroke-width", "1.6%"); // scaled to board
+    line.setAttribute("marker-end", `url(#${markerId})`);
+    
+    svg.appendChild(line);
+  }
+
+  function clearBoardVisuals() {
+    activeReviewVisual = null;
+    activeSearchSuggestedMove = null;
+    
+    document.querySelectorAll('.square').forEach(sq => {
+      sq.className = sq.className.split(' ').filter(c => !c.startsWith('move-')).join(' ');
+      const badge = sq.querySelector('.board-move-badge');
+      if (badge) badge.remove();
+    });
+    
+    const svg = document.getElementById('board-arrows-svg');
+    if (svg) {
+      svg.querySelectorAll('line').forEach(l => l.remove());
     }
   }
 
@@ -590,14 +696,22 @@ document.addEventListener('DOMContentLoaded', () => {
     
     moveExplanationEl.textContent = explanation;
     
-    // Highlight suggested move on the board squares
     const from = chosen.uci.substring(0, 2);
     const to = chosen.uci.substring(2, 4);
+
+    // Clear old visual suggestions
+    const svg = document.getElementById('board-arrows-svg');
+    if (svg) {
+      svg.querySelectorAll('line').forEach(l => l.remove());
+    }
     
-    // Clear previous selection highlights
-    document.querySelectorAll('.square').forEach(sq => {
-      sq.classList.remove('selected');
-    });
+    activeSearchSuggestedMove = {
+      from: from,
+      to: to
+    };
+    
+    // Draw suggestion path arrow
+    drawArrow(from, to, 'suggest');
     
     // Highlight suggestion squares
     const fromSquare = document.querySelector(`.square[data-coord="${from}"]`);
@@ -689,6 +803,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const move = chess.move({ from: from, to: to, promotion: promotion || 'q' });
     if (move) {
+      clearBoardVisuals();
       selectedSquare = null;
       updateBoardState();
       highlightLastMove(from, to);
@@ -764,6 +879,32 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     
+    // Create and append SVG overlay for arrows
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.id = "board-arrows-svg";
+    svg.setAttribute("class", "board-arrows-svg");
+    svg.innerHTML = `
+      <defs>
+        <marker id="arrowhead-best" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="rgba(20, 184, 166, 0.85)" />
+        </marker>
+        <marker id="arrowhead-suggest" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="rgba(56, 189, 248, 0.85)" />
+        </marker>
+      </defs>
+    `;
+    boardEl.appendChild(svg);
+    
+    // Apply active review highlights and badges
+    if (activeReviewVisual) {
+      applyReviewVisual(activeReviewVisual);
+    }
+    
+    // Draw suggestion arrow if set
+    if (activeSearchSuggestedMove) {
+      drawArrow(activeSearchSuggestedMove.from, activeSearchSuggestedMove.to, 'suggest');
+    }
+    
     updateSelectionHighlights();
   }
 
@@ -789,6 +930,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       
       if (move) {
+        clearBoardVisuals();
         highlightLastMove(selectedSquare, squareCoord);
         selectedSquare = null;
         updateBoardState();
@@ -890,6 +1032,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       
       if (move) {
+        clearBoardVisuals();
         highlightLastMove(fromCoord, toCoord);
         updateBoardState();
         resultsPanel.classList.add('hidden');
@@ -957,6 +1100,17 @@ document.addEventListener('DOMContentLoaded', () => {
             loss: 0
           };
           updateReviewScorecard();
+          
+          if (i === history.length - 1) {
+            activeReviewVisual = {
+              from: moveObj.from,
+              to: moveObj.to,
+              quality: 'book',
+              bestFrom: null,
+              bestTo: null
+            };
+            applyReviewVisual(activeReviewVisual);
+          }
         } else {
           // Add to evaluation queue
           reviewQueue.push({
@@ -1158,6 +1312,7 @@ document.addEventListener('DOMContentLoaded', () => {
       isReviewing = false;
       fenHistory = ['rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'];
       updateReviewScorecard();
+      clearBoardVisuals();
       
       updateBoardState();
     }
@@ -1178,6 +1333,7 @@ document.addEventListener('DOMContentLoaded', () => {
       isReviewing = false;
       fenHistory = [fen];
       updateReviewScorecard();
+      clearBoardVisuals();
       
       updateBoardState();
     } else {

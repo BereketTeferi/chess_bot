@@ -1283,4 +1283,68 @@ h3 {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
+/* ==========================================================================
+   Phase 3 - On-board Reviews & SVG Arrows
+   ========================================================================== */
+.board-arrows-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.board-move-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 15;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  animation: badgeBounce 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.board-move-badge .badge-icon {
+  font-size: 10px;
+  font-weight: 900;
+  color: white;
+  line-height: 1;
+}
+
+/* Specific Badge Background Colors */
+.board-move-badge.brilliant { background-color: #38bdf8; box-shadow: 0 0 6px rgba(56, 189, 248, 0.6); }
+.board-move-badge.great { background-color: #a855f7; }
+.board-move-badge.best { background-color: #15803d; }
+.board-move-badge.excellent { background-color: #22c55e; }
+.board-move-badge.book { background-color: #b45309; }
+.board-move-badge.good { background-color: #64748b; }
+.board-move-badge.inaccuracy { background-color: #eab308; color: var(--text-dark) !important; }
+.board-move-badge.inaccuracy .badge-icon { color: var(--text-dark) !important; }
+.board-move-badge.mistake { background-color: #f97316; }
+.board-move-badge.blunder { background-color: #ef4444; }
+
+/* Square Highlights */
+.square.move-brilliant { box-shadow: inset 0 0 0 3px #38bdf8; background-color: rgba(56, 189, 248, 0.15) !important; }
+.square.move-great { box-shadow: inset 0 0 0 3px #a855f7; background-color: rgba(168, 85, 247, 0.15) !important; }
+.square.move-best { box-shadow: inset 0 0 0 3px #15803d; background-color: rgba(21, 128, 61, 0.15) !important; }
+.square.move-excellent { box-shadow: inset 0 0 0 3px #22c55e; background-color: rgba(34, 197, 94, 0.15) !important; }
+.square.move-book { box-shadow: inset 0 0 0 3px #b45309; background-color: rgba(180, 83, 9, 0.15) !important; }
+.square.move-good { box-shadow: inset 0 0 0 3px #64748b; background-color: rgba(100, 116, 139, 0.15) !important; }
+.square.move-inaccuracy { box-shadow: inset 0 0 0 3px #eab308; background-color: rgba(234, 179, 8, 0.15) !important; }
+.square.move-mistake { box-shadow: inset 0 0 0 3px #f97316; background-color: rgba(249, 115, 22, 0.15) !important; }
+.square.move-blunder { box-shadow: inset 0 0 0 3px #ef4444; background-color: rgba(239, 68, 68, 0.15) !important; }
+
+@keyframes badgeBounce {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+
 
