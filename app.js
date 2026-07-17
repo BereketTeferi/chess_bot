@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let fenHistory = ['rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'];
 
   // --- Game Review State ---
-  let moveReviews = []; // Array of { san, quality, eval, loss }
+  let moveReviews = []; // Array of { san, quality, eval, loss, bestFrom, bestTo }
   let reviewQueue = [];  // Queue of { preMoveFen, uciMove, sanMove, moveIndex, moveObj }
   let isReviewing = false;
   let activeReviewTask = null;
@@ -20,6 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let engineMode = 'idle'; // 'idle', 'predicting', 'reviewing'
   let activeReviewVisual = null;      // Stored { from, to, quality, bestFrom, bestTo }
   let activeSearchSuggestedMove = null; // Stored { from, to }
+  
+  let activeHistoryIdx = -1;
+  let activeTab = 'good-moves'; // 'good-moves' or 'mistakes'
 
   // Standard opening sequences for Book Move detection
   const bookOpenings = new Set([
@@ -61,19 +64,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const moveExplanationEl = document.getElementById('move-explanation-text');
   const candidatesTbody = document.getElementById('candidates-tbody');
   
-  const reviewAccuracyVal = document.getElementById('review-accuracy-val');
-  const accuracyDialValue = document.getElementById('accuracy-dial-value');
-  const countBrilliant = document.getElementById('count-brilliant');
-  const countGreat = document.getElementById('count-great');
-  const countBest = document.getElementById('count-best');
-  const countExcellent = document.getElementById('count-excellent');
-  const countBook = document.getElementById('count-book');
-  const countGood = document.getElementById('count-good');
-  const countInaccuracy = document.getElementById('count-inaccuracy');
-  const countMistake = document.getElementById('count-mistake');
-  const countBlunder = document.getElementById('count-blunder');
+  const bestMoveSquares = document.getElementById('best-move-squares');
+  const accuracyWhite = document.getElementById('accuracy-white');
+  const accuracyBlack = document.getElementById('accuracy-black');
+  const tabGoodMoves = document.getElementById('tab-good-moves');
+  const tabMistakes = document.getElementById('tab-mistakes');
+  const summaryTableBody = document.getElementById('summary-table-body');
   
   const movesHistoryEl = document.getElementById('moves-history');
+  
+  const btnCtrlClear = document.getElementById('btn-ctrl-clear');
+  const btnCtrlCustom = document.getElementById('btn-ctrl-custom');
+  const btnCtrlFlip = document.getElementById('btn-ctrl-flip');
+  const btnCtrlStart = document.getElementById('btn-ctrl-start');
+  const btnCtrlPrev = document.getElementById('btn-ctrl-prev');
+  const btnCtrlNext = document.getElementById('btn-ctrl-next');
+  const btnCtrlEnd = document.getElementById('btn-ctrl-end');
   
   const btnToggleLog = document.getElementById('btn-toggle-log');
   const btnClearLog = document.getElementById('btn-clear-log');
@@ -358,7 +364,9 @@ document.addEventListener('DOMContentLoaded', () => {
       san: task.sanMove,
       quality: quality,
       eval: playedCandidate ? playedCandidate.eval : (bestMove.rawScore > 0 ? 'Worse' : 'Losing'),
-      loss: loss
+      loss: loss,
+      bestFrom: bestMove.uci.substring(0, 2),
+      bestTo: bestMove.uci.substring(2, 4)
     };
     
     logEngine(`[Reviewed Move ${task.moveIndex + 1}]: Result is ${quality.toUpperCase()} (Loss: ${loss} cp)`);
@@ -375,6 +383,10 @@ document.addEventListener('DOMContentLoaded', () => {
         bestTo: isSubOptimal ? bestMove.uci.substring(2, 4) : null
       };
       applyReviewVisual(activeReviewVisual);
+      
+      if (bestMoveSquares) {
+        bestMoveSquares.textContent = `${bestMove.uci.substring(0, 2)} → ${bestMove.uci.substring(2, 4)}`;
+      }
     }
     
     updateReviewScorecard();
@@ -513,62 +525,139 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateReviewScorecard() {
-    const counts = {
-      brilliant: 0,
-      great: 0,
-      best: 0,
-      excellent: 0,
-      book: 0,
-      good: 0,
-      inaccuracy: 0,
-      mistake: 0,
-      blunder: 0
-    };
+    const whiteCounts = { brilliant: 0, great: 0, best: 0, excellent: 0, book: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
+    const blackCounts = { brilliant: 0, great: 0, best: 0, excellent: 0, book: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
     
-    let totalLoss = 0;
-    let reviewedCount = 0;
+    let whiteLoss = 0, whiteCount = 0;
+    let blackLoss = 0, blackCount = 0;
     
-    moveReviews.forEach(r => {
+    moveReviews.forEach((r, idx) => {
       if (r && r.quality !== 'loading') {
-        counts[r.quality]++;
-        if (r.quality !== 'book') {
-          totalLoss += Math.max(0, r.loss);
-          reviewedCount++;
+        const isWhite = idx % 2 === 0;
+        if (isWhite) {
+          whiteCounts[r.quality]++;
+          if (r.quality !== 'book') {
+            whiteLoss += Math.max(0, r.loss);
+            whiteCount++;
+          }
+        } else {
+          blackCounts[r.quality]++;
+          if (r.quality !== 'book') {
+            blackLoss += Math.max(0, r.loss);
+            blackCount++;
+          }
         }
       }
     });
     
-    if (countBrilliant) countBrilliant.textContent = counts.brilliant;
-    if (countGreat) countGreat.textContent = counts.great;
-    if (countBest) countBest.textContent = counts.best;
-    if (countExcellent) countExcellent.textContent = counts.excellent;
-    if (countBook) countBook.textContent = counts.book;
-    if (countGood) countGood.textContent = counts.good;
-    if (countInaccuracy) countInaccuracy.textContent = counts.inaccuracy;
-    if (countMistake) countMistake.textContent = counts.mistake;
-    if (countBlunder) countBlunder.textContent = counts.blunder;
-    
-    let accuracy = 100;
-    if (reviewedCount > 0) {
-      const avgLoss = totalLoss / reviewedCount;
-      accuracy = Math.round(100 * Math.exp(-0.004 * avgLoss));
-      accuracy = Math.max(0, Math.min(100, accuracy));
+    // Calculate White and Black Accuracies
+    let whiteAcc = 100;
+    if (whiteCount > 0) {
+      const avg = whiteLoss / whiteCount;
+      whiteAcc = Math.round(100 * Math.exp(-0.004 * avg));
+      whiteAcc = Math.max(0, Math.min(100, whiteAcc));
     }
     
-    if (reviewAccuracyVal) reviewAccuracyVal.textContent = `${accuracy}%`;
+    let blackAcc = 100;
+    if (blackCount > 0) {
+      const avg = blackLoss / blackCount;
+      blackAcc = Math.round(100 * Math.exp(-0.004 * avg));
+      blackAcc = Math.max(0, Math.min(100, blackAcc));
+    }
     
-    if (accuracyDialValue) {
-      const dashoffset = 264 - (264 * accuracy / 100);
-      accuracyDialValue.style.strokeDashoffset = dashoffset;
+    if (accuracyWhite) accuracyWhite.textContent = `${whiteAcc}%`;
+    if (accuracyBlack) accuracyBlack.textContent = `${blackAcc}%`;
+    
+    // Render Tabular Summary Table based on activeTab
+    if (summaryTableBody) {
+      summaryTableBody.innerHTML = '';
       
-      if (accuracy >= 85) {
-        accuracyDialValue.style.stroke = 'var(--color-primary)';
-      } else if (accuracy >= 70) {
-        accuracyDialValue.style.stroke = '#38bdf8';
-      } else if (accuracy >= 50) {
-        accuracyDialValue.style.stroke = 'var(--color-warning)';
-      } else {
-        accuracyDialValue.style.stroke = 'var(--color-danger)';
+      const goodRows = [
+        { key: 'brilliant', label: 'Brilliant', icon: '!!' },
+        { key: 'great', label: 'Great Move', icon: '!' },
+        { key: 'best', label: 'Best', icon: '★' },
+        { key: 'excellent', label: 'Excellent', icon: '✔' },
+        { key: 'book', label: 'Book', icon: '📖' },
+        { key: 'good', label: 'Good', icon: '✓' }
+      ];
+      
+      const mistakeRows = [
+        { key: 'inaccuracy', label: 'Inaccuracy', icon: '?!' },
+        { key: 'mistake', label: 'Mistake', icon: '?' },
+        { key: 'blunder', label: 'Blunder', icon: '??' }
+      ];
+      
+      const activeRows = activeTab === 'good-moves' ? goodRows : mistakeRows;
+      
+      activeRows.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.className = `tr-${row.key}`;
+        
+        const wVal = whiteCounts[row.key];
+        const bVal = blackCounts[row.key];
+        
+        tr.innerHTML = `
+          <td><span class="summary-grade-name">${row.label}</span></td>
+          <td align="center"><span class="summary-count-val">${wVal}</span></td>
+          <td align="center">
+            <div class="summary-icon-cell">
+              <span class="summary-table-badge ${row.key}">${row.icon}</span>
+            </div>
+          </td>
+          <td align="center"><span class="summary-count-val">${bVal}</span></td>
+        `;
+        summaryTableBody.appendChild(tr);
+      });
+    }
+  }
+
+  function showPositionAtIndex(index) {
+    if (index < -1 || index >= chess.history().length) return;
+    activeHistoryIdx = index;
+    
+    // Clear selection highlights
+    selectedSquare = null;
+    updateSelectionHighlights();
+    
+    // Load FEN
+    const targetFen = fenHistory[index + 1] || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    chess.load(targetFen);
+    
+    // Redraw board
+    drawBoard();
+    
+    // Highlight the move played in history list
+    document.querySelectorAll('.history-move-item').forEach(el => {
+      el.classList.remove('active-history-move');
+    });
+    
+    if (index >= 0) {
+      const activeEl = document.querySelector(`.history-move-item[data-index="${index}"]`);
+      if (activeEl) {
+        activeEl.classList.add('active-history-move');
+        activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+      
+      const history = chess.history({ verbose: true });
+      const moveObj = history[index];
+      if (moveObj) {
+        highlightLastMove(moveObj.from, moveObj.to);
+      }
+      
+      // Render badges and arrows if review is calculated
+      const review = moveReviews[index];
+      if (review && review.quality !== 'loading') {
+        const isSubOptimal = !['brilliant', 'great', 'best', 'excellent'].includes(review.quality);
+        const bestFrom = isSubOptimal && review.bestFrom ? review.bestFrom : null;
+        const bestTo = isSubOptimal && review.bestTo ? review.bestTo : null;
+        
+        applyReviewVisual({
+          from: moveObj.from,
+          to: moveObj.to,
+          quality: review.quality,
+          bestFrom: bestFrom,
+          bestTo: bestTo
+        });
       }
     }
   }
@@ -804,6 +893,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const move = chess.move({ from: from, to: to, promotion: promotion || 'q' });
     if (move) {
       clearBoardVisuals();
+      activeHistoryIdx = chess.history().length - 1;
       selectedSquare = null;
       updateBoardState();
       highlightLastMove(from, to);
@@ -931,6 +1021,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (move) {
         clearBoardVisuals();
+        activeHistoryIdx = chess.history().length - 1;
         highlightLastMove(selectedSquare, squareCoord);
         selectedSquare = null;
         updateBoardState();
@@ -1033,6 +1124,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (move) {
         clearBoardVisuals();
+        activeHistoryIdx = chess.history().length - 1;
         highlightLastMove(fromCoord, toCoord);
         updateBoardState();
         resultsPanel.classList.add('hidden');
@@ -1110,6 +1202,10 @@ document.addEventListener('DOMContentLoaded', () => {
               bestTo: null
             };
             applyReviewVisual(activeReviewVisual);
+            
+            if (bestMoveSquares) {
+              bestMoveSquares.textContent = `${moveObj.from} → ${moveObj.to}`;
+            }
           }
         } else {
           // Add to evaluation queue
@@ -1193,8 +1289,18 @@ document.addEventListener('DOMContentLoaded', () => {
       movesHistoryEl.appendChild(turnDiv);
     });
     
-    // Auto-scroll move history to bottom
-    movesHistoryEl.scrollTop = movesHistoryEl.scrollHeight;
+    // Auto-scroll move history to bottom if active index is latest
+    if (activeHistoryIdx === -1 || activeHistoryIdx === history.length - 1) {
+      movesHistoryEl.scrollTop = movesHistoryEl.scrollHeight;
+    }
+    
+    // Bind click events for scrubbing
+    document.querySelectorAll('.history-move-item').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(e.currentTarget.getAttribute('data-index'));
+        showPositionAtIndex(idx);
+      });
+    });
   }
 
   // --- Setting Classifications based on Sliders ---
@@ -1417,6 +1523,70 @@ document.addEventListener('DOMContentLoaded', () => {
         warningOverlay.classList.add('hidden');
       });
     }
+  }
+
+  // --- Summary Tab Toggles ---
+  if (tabGoodMoves && tabMistakes) {
+    tabGoodMoves.addEventListener('click', () => {
+      activeTab = 'good-moves';
+      tabGoodMoves.classList.add('active');
+      tabMistakes.classList.remove('active');
+      updateReviewScorecard();
+    });
+    
+    tabMistakes.addEventListener('click', () => {
+      activeTab = 'mistakes';
+      tabMistakes.classList.add('active');
+      tabGoodMoves.classList.remove('active');
+      updateReviewScorecard();
+    });
+  }
+
+  // --- Scrub Navigation Controls ---
+  if (btnCtrlClear) {
+    btnCtrlClear.addEventListener('click', () => {
+      btnReset.click();
+    });
+  }
+  
+  if (btnCtrlCustom) {
+    btnCtrlCustom.addEventListener('click', () => {
+      const fen = prompt("Enter custom board FEN position:", chess.fen());
+      if (fen) {
+        fenInputEl.value = fen;
+        btnLoadFen.click();
+      }
+    });
+  }
+  
+  if (btnCtrlFlip) {
+    btnCtrlFlip.addEventListener('click', () => {
+      btnFlip.click();
+    });
+  }
+  
+  if (btnCtrlStart) {
+    btnCtrlStart.addEventListener('click', () => {
+      showPositionAtIndex(-1);
+    });
+  }
+  
+  if (btnCtrlPrev) {
+    btnCtrlPrev.addEventListener('click', () => {
+      showPositionAtIndex(activeHistoryIdx - 1);
+    });
+  }
+  
+  if (btnCtrlNext) {
+    btnCtrlNext.addEventListener('click', () => {
+      showPositionAtIndex(activeHistoryIdx + 1);
+    });
+  }
+  
+  if (btnCtrlEnd) {
+    btnCtrlEnd.addEventListener('click', () => {
+      showPositionAtIndex(chess.history().length - 1);
+    });
   }
 
   initEngine();

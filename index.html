@@ -186,80 +186,76 @@
         </div>
       </div>
       
+      <!-- Best Move Banner -->
+      <div class="glass-panel best-move-banner">
+        <h3>Best Move</h3>
+        <div class="best-move-details">
+          <span class="best-move-label">Best Stockfish move</span>
+          <span id="best-move-squares" class="best-move-squares">— → —</span>
+        </div>
+      </div>
+      
       <!-- Game Review Panel -->
       <div class="glass-panel review-panel">
         <h2>Game Review & Analysis</h2>
-        <div class="review-layout">
-          <!-- Accuracy Meter (Circular Dial/Bar) -->
-          <div class="accuracy-meter-box">
-            <div class="accuracy-dial">
-              <svg viewBox="0 0 100 100" class="dial-svg">
-                <circle cx="50" cy="50" r="42" class="dial-bg"></circle>
-                <circle cx="50" cy="50" r="42" class="dial-value" id="accuracy-dial-value" stroke-dasharray="264" stroke-dashoffset="264"></circle>
-              </svg>
-              <div class="dial-text">
-                <span id="review-accuracy-val" class="dial-percent">100%</span>
-                <span class="dial-label">Accuracy</span>
-              </div>
+        
+        <!-- Accuracy Section -->
+        <div class="accuracy-section">
+          <div class="accuracy-cards-container">
+            <div class="accuracy-card white-player">
+              <span class="player-label">White</span>
+              <span id="accuracy-white" class="accuracy-pct">100%</span>
             </div>
+            <div class="accuracy-card black-player">
+              <span class="player-label">Black</span>
+              <span id="accuracy-black" class="accuracy-pct">100%</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Summary Section -->
+        <div class="summary-section">
+          <div class="summary-tabs">
+            <button id="tab-good-moves" class="summary-tab-btn active">Good Moves</button>
+            <button id="tab-mistakes" class="summary-tab-btn">Mistakes</button>
           </div>
           
-          <!-- Scorecard Grid -->
-          <div class="scorecard-grid">
-            <div class="score-card-item brilliant" title="Brilliant (!!)">
-              <span class="score-icon">!!</span>
-              <span class="score-count" id="count-brilliant">0</span>
-              <span class="score-label">Brilliant</span>
-            </div>
-            <div class="score-card-item great" title="Great Move (!)">
-              <span class="score-icon">!</span>
-              <span class="score-count" id="count-great">0</span>
-              <span class="score-label">Great</span>
-            </div>
-            <div class="score-card-item best" title="Best Move">
-              <span class="score-icon">🟢</span>
-              <span class="score-count" id="count-best">0</span>
-              <span class="score-label">Best</span>
-            </div>
-            <div class="score-card-item excellent" title="Excellent Move">
-              <span class="score-icon">💚</span>
-              <span class="score-count" id="count-excellent">0</span>
-              <span class="score-label">Excellent</span>
-            </div>
-            <div class="score-card-item book" title="Book Move">
-              <span class="score-icon">📖</span>
-              <span class="score-count" id="count-book">0</span>
-              <span class="score-label">Book</span>
-            </div>
-            <div class="score-card-item good" title="Good Move">
-              <span class="score-icon">💙</span>
-              <span class="score-count" id="count-good">0</span>
-              <span class="score-label">Good</span>
-            </div>
-            <div class="score-card-item inaccuracy" title="Inaccuracy">
-              <span class="score-icon">🟡</span>
-              <span class="score-count" id="count-inaccuracy">0</span>
-              <span class="score-label">Inaccuracy</span>
-            </div>
-            <div class="score-card-item mistake" title="Mistake">
-              <span class="score-icon">🟠</span>
-              <span class="score-count" id="count-mistake">0</span>
-              <span class="score-label">Mistake</span>
-            </div>
-            <div class="score-card-item blunder" title="Blunder">
-              <span class="score-icon">🔴</span>
-              <span class="score-count" id="count-blunder">0</span>
-              <span class="score-label">Blunder</span>
-            </div>
-          </div>
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th align="left">Grade</th>
+                <th align="center">White</th>
+                <th align="center"></th>
+                <th align="center">Black</th>
+              </tr>
+            </thead>
+            <tbody id="summary-table-body">
+              <!-- Dynamically populated review items -->
+            </tbody>
+          </table>
         </div>
       </div>
 
       <!-- Move History Panel -->
       <div class="glass-panel history-panel">
-        <h3>Move History</h3>
+        <h3>Moves</h3>
         <div id="moves-history" class="moves-history">
           <div class="empty-history-text">No moves played yet. Start dragging pieces or click Suggest to begin!</div>
+        </div>
+        
+        <!-- Controls block -->
+        <div class="history-controls-wrapper">
+          <div class="controls-row-top">
+             <button id="btn-ctrl-clear" class="control-btn">⟳ Clear</button>
+             <button id="btn-ctrl-custom" class="control-btn">Custom Moves</button>
+             <button id="btn-ctrl-flip" class="control-btn">⇅ Flip</button>
+          </div>
+          <div class="controls-row-bottom">
+             <button id="btn-ctrl-start" class="control-btn">≪ Start</button>
+             <button id="btn-ctrl-prev" class="control-btn">◀ Prev</button>
+             <button id="btn-ctrl-next" class="control-btn">Next ▶</button>
+             <button id="btn-ctrl-end" class="control-btn">End ≫</button>
+          </div>
         </div>
       </div>
     </section>

@@ -1346,5 +1346,262 @@ h3 {
   100% { transform: scale(1); opacity: 1; }
 }
 
+/* ==========================================================================
+   Phase 4 - Comparative Scorecard & Control Layout
+   ========================================================================== */
+
+/* Best Move Banner */
+.best-move-banner {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  margin-bottom: 0.75rem !important;
+}
+
+.best-move-banner h3 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.best-move-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.best-move-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.best-move-squares {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #38bdf8;
+  font-family: var(--font-mono);
+  background: rgba(56, 189, 248, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+/* Accuracy Section */
+.accuracy-section {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.accuracy-cards-container {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.accuracy-card {
+  flex: 1;
+  border-radius: 10px;
+  padding: 0.75rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid transparent;
+}
+
+.accuracy-card.white-player {
+  background-color: white;
+  color: #121214;
+}
+
+.accuracy-card.white-player .player-label {
+  color: #5f6368;
+}
+
+.accuracy-card.black-player {
+  background-color: #1a1a1e;
+  color: white;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.accuracy-card.black-player .player-label {
+  color: #9aa0a6;
+}
+
+.player-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.accuracy-pct {
+  font-size: 1.6rem;
+  font-weight: 900;
+  font-family: var(--font-mono);
+}
+
+/* Summary Tabs */
+.summary-section {
+  width: 100%;
+}
+
+.summary-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 2px;
+  margin-bottom: 0.75rem;
+}
+
+.summary-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.4rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.summary-tab-btn.active {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-main);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Summary Table */
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.summary-table th {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  letter-spacing: 0.05em;
+}
+
+.summary-table td {
+  padding: 0.45rem 0.25rem;
+  font-size: 0.8rem;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.summary-table tr:last-child td {
+  border-bottom: none;
+}
+
+.summary-grade-name {
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+/* Row specific text colors */
+.tr-brilliant .summary-grade-name { color: #38bdf8; }
+.tr-great .summary-grade-name { color: #a855f7; }
+.tr-best .summary-grade-name { color: #22c55e; }
+.tr-excellent .summary-grade-name { color: #15803d; }
+.tr-book .summary-grade-name { color: #b45309; }
+.tr-good .summary-grade-name { color: #64748b; }
+.tr-inaccuracy .summary-grade-name { color: #eab308; }
+.tr-mistake .summary-grade-name { color: #f97316; }
+.tr-blunder .summary-grade-name { color: #ef4444; }
+
+.summary-count-val {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  text-align: center;
+}
+
+.summary-icon-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.summary-table-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 900;
+  color: white;
+}
+
+.summary-table-badge.brilliant { background-color: #38bdf8; box-shadow: 0 0 4px rgba(56, 189, 248, 0.5); }
+.summary-table-badge.great { background-color: #a855f7; }
+.summary-table-badge.best { background-color: #15803d; }
+.summary-table-badge.excellent { background-color: #22c55e; }
+.summary-table-badge.book { background-color: #b45309; }
+.summary-table-badge.good { background-color: #64748b; }
+.summary-table-badge.inaccuracy { background-color: #eab308; color: var(--text-dark); }
+.summary-table-badge.mistake { background-color: #f97316; }
+.summary-table-badge.blunder { background-color: #ef4444; }
+
+/* Scrub Controls */
+.history-controls-wrapper {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.controls-row-top, .controls-row-bottom {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.control-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.control-btn:active {
+  transform: scale(0.97);
+}
+
+/* Highlight for currently selected review history state */
+.history-move-item.active-history-move {
+  background-color: rgba(20, 184, 166, 0.2) !important;
+  border: 1px solid rgba(20, 184, 166, 0.4);
+  box-shadow: 0 0 6px rgba(20, 184, 166, 0.15);
+}
+
+
 
 
