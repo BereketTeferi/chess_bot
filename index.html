@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A lightweight, offline-first Chess ELO & Accuracy Predictor. Simulate chess moves played by humans from ELO 500 up to 3000 with custom accuracy controls.">
+  <meta name="keywords" content="chess, stockfish, engine, elo simulator, blunder simulator, chess calculator, next chess move">
+  <meta name="author" content="Antigravity Chess Bot">
+  <title>Chess ELO & Accuracy Predictor</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Core Styling -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- chess.js for chess logic and rules validation -->
+  <script src="chess.js"></script>
+</head>
+<body>
+
+  <!-- File Protocol Warning Overlay -->
+  <div id="file-warning-overlay" class="warning-overlay hidden">
+    <div class="warning-card">
+      <div class="warning-icon">⚠️</div>
+      <h2>Local Server Ready!</h2>
+      <p>Modern browsers block the Chess Engine Web Worker when pages are opened directly as local files (<code>file://</code>).</p>
+      <p class="highlight-text">Please use the local server running for you:</p>
+      <a href="http://localhost:8000" target="_blank" class="server-link-btn">Open http://localhost:8000</a>
+      <button id="btn-warning-dismiss" class="dismiss-btn">Continue without engine (Board only)</button>
+    </div>
+  </div>
+
+  <header class="app-header">
+    <div class="header-container">
+      <div class="logo-area">
+        <svg class="logo-icon" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+        <div>
+          <h1>NextMove <span class="accent-text">Predictor</span></h1>
+          <p class="subtitle">Simulate human decision-making across chess skill levels</p>
+        </div>
+      </div>
+      <div class="header-badge">
+        <span class="status-indicator online" id="status-dot"></span>
+        <span id="engine-status-text">Engine Loading...</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-main-layout">
+    <!-- Left Column: Board and Fen Input -->
+    <section class="column-left">
+      <div class="glass-panel board-container">
+        <!-- The interactive chessboard grid -->
+        <div id="chess-board" class="chess-board"></div>
+        
+        <div class="board-info-bar">
+          <div id="game-status" class="game-status">White's turn</div>
+          <div class="board-actions">
+            <button id="btn-flip" class="icon-btn" title="Flip Board">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+              </svg>
+            </button>
+            <button id="btn-reset" class="icon-btn btn-danger" title="Reset Board">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- FEN and PGN management panel -->
+      <div class="glass-panel fen-panel">
+        <h3>Board Position (FEN)</h3>
+        <div class="fen-input-wrapper">
+          <input type="text" id="fen-input" placeholder="Paste FEN string here..." value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1">
+          <button id="btn-load-fen" class="primary-btn-sm">Load</button>
+        </div>
+        <div class="fen-quick-copy">
+          <span class="fen-preview" id="fen-preview-text">rnbqkbnr/...</span>
+          <button id="btn-copy-fen" class="secondary-btn-sm">Copy FEN</button>
+        </div>
+
+        <h3 class="export-header-margin">Share & Export (PGN)</h3>
+        <div class="pgn-export-wrapper">
+          <button id="btn-copy-pgn" class="primary-btn-sm btn-half">Copy PGN</button>
+          <button id="btn-export-pgn" class="secondary-btn-sm btn-half">Download PGN</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Control Panel & Engine Output -->
+    <section class="column-right">
+      <!-- Settings Panel -->
+      <div class="glass-panel settings-panel">
+        <h2>Simulation Settings</h2>
+        
+        <!-- Slider 1: ELO Level -->
+        <div class="slider-group">
+          <div class="slider-header">
+            <label for="elo-slider">Target ELO Rating</label>
+            <span class="slider-value-badge"><span id="elo-val">1500</span> ELO</span>
+          </div>
+          <input type="range" id="elo-slider" min="500" max="3000" step="100" value="1500" class="premium-slider">
+          <div class="slider-labels">
+            <span>500 (Beginner)</span>
+            <span>1500 (Intermediate)</span>
+            <span>3000 (Grandmaster)</span>
+          </div>
+        </div>
+
+        <!-- Slider 2: Accuracy -->
+        <div class="slider-group">
+          <div class="slider-header">
+            <label for="accuracy-slider">Simulated Accuracy</label>
+            <span class="slider-value-badge"><span id="accuracy-val">75</span>%</span>
+          </div>
+          <input type="range" id="accuracy-slider" min="0" max="100" step="5" value="75" class="premium-slider">
+          <div class="accuracy-classification" id="accuracy-class">
+            Solid Play (Occasional Inaccuracies)
+          </div>
+          <div class="slider-labels">
+            <span>0% (Blunderfest)</span>
+            <span>50% (Average)</span>
+            <span>100% (Perfect)</span>
+          </div>
+        </div>
+
+        <!-- Big CTA Button -->
+        <button id="btn-predict" class="cta-predict-btn" disabled>
+          <span class="btn-content">
+            <svg class="btn-spinner hidden" id="predict-spinner" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3">
+              <circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="8"/>
+            </svg>
+            <span id="btn-predict-text">Loading Chess Engine...</span>
+          </span>
+        </button>
+      </div>
+
+      <!-- Prediction Output Panel -->
+      <div class="glass-panel results-panel hidden" id="results-panel">
+        <h2>Engine Analysis</h2>
+
+        <!-- Main Suggestion Card -->
+        <div class="suggestion-card">
+          <div class="card-left">
+            <div class="suggestion-label">Suggested Move</div>
+            <div class="suggested-move-notation" id="chosen-move-notation">e2-e4</div>
+            <div class="chosen-move-eval" id="chosen-move-eval">Evaluation: +0.35</div>
+          </div>
+          <div class="card-right">
+            <div class="move-quality-badge" id="chosen-move-quality">Best Move</div>
+            <p class="move-explanation" id="move-explanation-text">
+              Based on a 1500 ELO level and 75% accuracy rating, this move is a strong choice that maintains dynamic balance.
+            </p>
+          </div>
+        </div>
+
+        <!-- Candidate Moves Options -->
+        <div class="candidates-section">
+          <h3>Alternative Decisions Considered</h3>
+          <div class="candidates-table-container">
+            <table class="candidates-table">
+              <thead>
+                <tr>
+                  <th>Rank / Type</th>
+                  <th>Move</th>
+                  <th>Evaluation</th>
+                  <th>Chance</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="candidates-tbody">
+                <!-- Will be dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Game Review Panel -->
+      <div class="glass-panel review-panel">
+        <h2>Game Review & Analysis</h2>
+        <div class="review-layout">
+          <!-- Accuracy Meter (Circular Dial/Bar) -->
+          <div class="accuracy-meter-box">
+            <div class="accuracy-dial">
+              <svg viewBox="0 0 100 100" class="dial-svg">
+                <circle cx="50" cy="50" r="42" class="dial-bg"></circle>
+                <circle cx="50" cy="50" r="42" class="dial-value" id="accuracy-dial-value" stroke-dasharray="264" stroke-dashoffset="264"></circle>
+              </svg>
+              <div class="dial-text">
+                <span id="review-accuracy-val" class="dial-percent">100%</span>
+                <span class="dial-label">Accuracy</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Scorecard Grid -->
+          <div class="scorecard-grid">
+            <div class="score-card-item brilliant" title="Brilliant (!!)">
+              <span class="score-icon">!!</span>
+              <span class="score-count" id="count-brilliant">0</span>
+              <span class="score-label">Brilliant</span>
+            </div>
+            <div class="score-card-item great" title="Great Move (!)">
+              <span class="score-icon">!</span>
+              <span class="score-count" id="count-great">0</span>
+              <span class="score-label">Great</span>
+            </div>
+            <div class="score-card-item best" title="Best Move">
+              <span class="score-icon">🟢</span>
+              <span class="score-count" id="count-best">0</span>
+              <span class="score-label">Best</span>
+            </div>
+            <div class="score-card-item excellent" title="Excellent Move">
+              <span class="score-icon">💚</span>
+              <span class="score-count" id="count-excellent">0</span>
+              <span class="score-label">Excellent</span>
+            </div>
+            <div class="score-card-item book" title="Book Move">
+              <span class="score-icon">📖</span>
+              <span class="score-count" id="count-book">0</span>
+              <span class="score-label">Book</span>
+            </div>
+            <div class="score-card-item good" title="Good Move">
+              <span class="score-icon">💙</span>
+              <span class="score-count" id="count-good">0</span>
+              <span class="score-label">Good</span>
+            </div>
+            <div class="score-card-item inaccuracy" title="Inaccuracy">
+              <span class="score-icon">🟡</span>
+              <span class="score-count" id="count-inaccuracy">0</span>
+              <span class="score-label">Inaccuracy</span>
+            </div>
+            <div class="score-card-item mistake" title="Mistake">
+              <span class="score-icon">🟠</span>
+              <span class="score-count" id="count-mistake">0</span>
+              <span class="score-label">Mistake</span>
+            </div>
+            <div class="score-card-item blunder" title="Blunder">
+              <span class="score-icon">🔴</span>
+              <span class="score-count" id="count-blunder">0</span>
+              <span class="score-label">Blunder</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Move History Panel -->
+      <div class="glass-panel history-panel">
+        <h3>Move History</h3>
+        <div id="moves-history" class="moves-history">
+          <div class="empty-history-text">No moves played yet. Start dragging pieces or click Suggest to begin!</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <p>&copy; 2026 NextMove Predictor. Powered by client-side Stockfish WASM. Lightweight & Serverless.</p>
+      <div class="footer-links">
+        <a href="#" class="footer-link" id="btn-toggle-log">Toggle Engine Log</a>
+      </div>
+    </div>
+    <!-- Collapsible Console Log for debugging -->
+    <div id="engine-log-container" class="engine-log-container hidden">
+      <div class="log-header">
+        <span>Engine Output Stream</span>
+        <button id="btn-clear-log" class="log-clear-btn">Clear Logs</button>
+      </div>
+      <pre id="engine-log" class="engine-log-stream"></pre>
+    </div>
+  </footer>
+
+  <!-- Main Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
